@@ -6,15 +6,17 @@ export type PeerMedia = {
 export class WebRTCService {
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
+  private iceServers: RTCIceServer[] = [];
+
+  configure(iceServers: RTCIceServer[]) {
+    this.iceServers = iceServers;
+  }
 
   createPeerConnection() {
     if (this.peerConnection) return this.peerConnection;
 
     this.peerConnection = new RTCPeerConnection({
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-      ],
+      iceServers: this.iceServers,
       iceTransportPolicy: "all",
       bundlePolicy: "max-bundle",
       rtcpMuxPolicy: "require",

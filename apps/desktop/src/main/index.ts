@@ -1,7 +1,10 @@
 import { join } from "node:path";
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, shell, Menu } from "electron";
+import { initMainSentry } from "./sentry";
 
 const isDev = process.env.NODE_ENV === "development";
+
+initMainSentry();
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -13,13 +16,17 @@ function createWindow() {
     backgroundColor: "#0C0B0F",
     titleBarStyle: "hiddenInset",
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: join(__dirname, "../preload/index.mjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
     },
   });
+
+  // Hide Electron's default menu (removes "Help/Learn More/Documentation" items).
+  Menu.setApplicationMenu(null);
+  mainWindow.setMenuBarVisibility(false);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);

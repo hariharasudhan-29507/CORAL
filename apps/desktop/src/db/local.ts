@@ -1,7 +1,7 @@
 export const localSchema = [
   `create table if not exists messages (
     id text primary key,
-    room_id text not null,
+    conversation_id text not null,
     sender_id text not null,
     sender_name text not null,
     body text not null,
