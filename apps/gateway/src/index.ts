@@ -8,19 +8,45 @@ import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { attachSocketIdentity, type AuthedSocket } from "./middleware/auth.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
-import { registerAiHandlers } from "./modules/ai/ai.handlers.js";
+import { callsRouter } from "./modules/calls/calls.routes.js";
+import { chatRouter } from "./modules/chat/chat.routes.js";
+import { conversationsRouter } from "./modules/conversations/conversations.routes.js";
+import { friendsRouter } from "./modules/friends/friends.routes.js";
+import { profileRouter } from "./modules/profile/profile.routes.js";
 import { registerChatHandlers } from "./modules/chat/chat.handlers.js";
 import { registerPresenceHandlers } from "./modules/presence/presence.handlers.js";
+import { userCanAccessConversation } from "./lib/supabaseAdmin.js";
 import { joinRoom, leaveAllRooms, leaveRoom } from "./modules/rooms/rooms.service.js";
 import { registerSignalingHandlers } from "./modules/signaling/signaling.handlers.js";
+import { registerTypingHandlers } from "./modules/typing/typing.handlers.js";
 
 const app = express();
 const server = http.createServer(app);
 
 app.use(helmet());
-app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      // Electron renderer often has `origin: null` or no origin depending on the URL scheme.
+      if (!origin || origin === "null") return callback(null, true);
+
+      if (origin === env.CORS_ORIGIN) return callback(null, true);
+
+      // Allow local dev variants.
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+
+      return callback(null, false);
+    },
+  }),
+);
 app.use(express.json({ limit: "1mb" }));
 app.use("/auth", authRouter);
+app.use("/calls", callsRouter);
+app.use("/chat", chatRouter);
+app.use("/conversations", conversationsRouter);
+app.use("/friends", friendsRouter);
+app.use("/profile", profileRouter);
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -32,24 +58,37 @@ app.get("/health", (_req, res) => {
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
   cors: {
-    origin: env.CORS_ORIGIN,
     credentials: true,
+    origin: (origin, callback) => {
+      if (!origin || origin === "null") return callback(null, true);
+      if (origin === env.CORS_ORIGIN) return callback(null, true);
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+      return callback(null, false);
+    },
   },
 });
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   const authedSocket = socket as AuthedSocket;
-  attachSocketIdentity(authedSocket);
+  await attachSocketIdentity(authedSocket);
+  if (authedSocket.userId) authedSocket.join(`user:${authedSocket.userId}`);
 
-  authedSocket.on("room:join", ({ roomId }) => {
-    authedSocket.join(roomId);
-    joinRoom(authedSocket.id, roomId);
-    logger.info({ roomId, userId: authedSocket.userId }, "socket joined room");
+  authedSocket.on("conversation:join", async ({ conversationId }) => {
+    if (!authedSocket.userId || !(await userCanAccessConversation(authedSocket.userId, conversationId))) {
+      authedSocket.emit("system:error", {
+        code: "CONVERSATION_FORBIDDEN",
+        message: "You do not have access to this conversation.",
+      });
+      return;
+    }
+    authedSocket.join(conversationId);
+    joinRoom(authedSocket.id, conversationId);
+    logger.info({ conversationId, userId: authedSocket.userId }, "socket joined conversation");
   });
 
-  authedSocket.on("room:leave", ({ roomId }) => {
-    authedSocket.leave(roomId);
-    leaveRoom(authedSocket.id, roomId);
+  authedSocket.on("conversation:leave", ({ conversationId }) => {
+    authedSocket.leave(conversationId);
+    leaveRoom(authedSocket.id, conversationId);
   });
 
   authedSocket.on("disconnect", () => {
@@ -59,7 +98,7 @@ io.on("connection", (socket) => {
   registerChatHandlers(io, authedSocket);
   registerPresenceHandlers(io, authedSocket);
   registerSignalingHandlers(io, authedSocket);
-  registerAiHandlers(io, authedSocket);
+  registerTypingHandlers(io, authedSocket);
 });
 
 server.listen(env.PORT, () => {

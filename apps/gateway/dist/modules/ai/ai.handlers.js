@@ -14,14 +14,14 @@ export function registerAiHandlers(io, socket) {
         try {
             const replyId = randomUUID();
             for await (const token of createAssistantDraftStream(parsed.data.prompt)) {
-                io.to(parsed.data.roomId).emit("ai:token", {
-                    roomId: parsed.data.roomId,
+                io.to(parsed.data.conversationId).emit("ai:token", {
+                    conversationId: parsed.data.conversationId,
                     replyId,
                     token,
                 });
             }
-            io.to(parsed.data.roomId).emit("ai:done", {
-                roomId: parsed.data.roomId,
+            io.to(parsed.data.conversationId).emit("ai:done", {
+                conversationId: parsed.data.conversationId,
                 replyId,
             });
         }

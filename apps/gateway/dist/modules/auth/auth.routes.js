@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { ZodError } from "zod";
-import { createUser, loginSchema, loginUser, registerSchema, verifySessionToken } from "./auth.service.js";
+import { verifyAuthToken } from "./auth.service.js";
 export const authRouter = Router();
 function sendAuthError(res, error) {
     if (error instanceof ZodError) {
@@ -11,30 +11,16 @@ function sendAuthError(res, error) {
     }
     return res.status(500).json({ error: "Authentication failed." });
 }
-authRouter.post("/register", async (req, res) => {
-    try {
-        const payload = registerSchema.parse(req.body);
-        const session = await createUser(payload);
-        res.status(201).json(session);
-    }
-    catch (error) {
-        sendAuthError(res, error);
-    }
-});
-authRouter.post("/login", async (req, res) => {
-    try {
-        const payload = loginSchema.parse(req.body);
-        const session = await loginUser(payload);
-        res.json(session);
-    }
-    catch (error) {
-        sendAuthError(res, error);
-    }
-});
-authRouter.get("/me", (req, res) => {
+authRouter.post("/register", (_req, res) => res.status(410).json({
+    error: "Registration is handled by Supabase Auth. Send a Supabase access token to /auth/me for gateway verification.",
+}));
+authRouter.post("/login", (_req, res) => res.status(410).json({
+    error: "Login is handled by Supabase Auth. Send a Supabase access token to /auth/me for gateway verification.",
+}));
+authRouter.get("/me", async (req, res) => {
     const header = req.headers.authorization;
     const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
-    const user = verifySessionToken(token);
+    const user = await verifyAuthToken(token);
     if (!user) {
         return res.status(401).json({ error: "Session expired. Please sign in again." });
     }
