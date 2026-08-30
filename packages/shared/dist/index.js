@@ -117,6 +117,31 @@ export const conversationParticipantSchema = z.object({
     joinedAt: z.string().datetime(),
     profile: profileSchema.optional(),
 });
+export const noteSchema = z.object({
+    id: z.string(),
+    userId: userIdSchema,
+    username: z.string().optional(),
+    nickname: z.string(),
+    avatarUrl: z.string().optional(),
+    text: z.string().max(60),
+    emoji: z.string().max(8).optional(),
+    createdAt: z.string().datetime(),
+    expiresAt: z.string().datetime(),
+});
+export const readReceiptPayloadSchema = z.object({
+    conversationId: z.string(),
+    userId: userIdSchema,
+    messageId: z.string().optional(),
+    readAt: z.string().datetime(),
+});
+export const vanishingModePayloadSchema = z.object({
+    conversationId: z.string(),
+    enabled: z.boolean(),
+});
+export const createGroupPayloadSchema = z.object({
+    title: z.string().min(1).max(80),
+    memberIds: z.array(userIdSchema).min(1),
+});
 export const messageReceiptSchema = z.object({
     messageId: z.string().uuid(),
     userId: z.string().uuid(),

@@ -132,6 +132,35 @@ export const conversationParticipantSchema = z.object({
   profile: profileSchema.optional(),
 });
 
+export const noteSchema = z.object({
+  id: z.string(),
+  userId: userIdSchema,
+  username: z.string().optional(),
+  nickname: z.string(),
+  avatarUrl: z.string().optional(),
+  text: z.string().max(60),
+  emoji: z.string().max(8).optional(),
+  createdAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+});
+
+export const readReceiptPayloadSchema = z.object({
+  conversationId: z.string(),
+  userId: userIdSchema,
+  messageId: z.string().optional(),
+  readAt: z.string().datetime(),
+});
+
+export const vanishingModePayloadSchema = z.object({
+  conversationId: z.string(),
+  enabled: z.boolean(),
+});
+
+export const createGroupPayloadSchema = z.object({
+  title: z.string().min(1).max(80),
+  memberIds: z.array(userIdSchema).min(1),
+});
+
 export const messageReceiptSchema = z.object({
   messageId: z.string().uuid(),
   userId: z.string().uuid(),
@@ -163,11 +192,18 @@ export type Conversation = z.infer<typeof conversationSchema>;
 export type ConversationParticipant = z.infer<typeof conversationParticipantSchema>;
 export type MessageReceipt = z.infer<typeof messageReceiptSchema>;
 export type CallSession = z.infer<typeof callSessionSchema>;
+export type Note = z.infer<typeof noteSchema>;
+export type ReadReceiptPayload = z.infer<typeof readReceiptPayloadSchema>;
+export type VanishingModePayload = z.infer<typeof vanishingModePayloadSchema>;
+export type CreateGroupPayload = z.infer<typeof createGroupPayloadSchema>;
 
 export type ServerToClientEvents = {
   "chat:message": (message: ChatMessage) => void;
   "chat:reaction": (payload: ReactionPayload) => void;
   "chat:delete": (payload: DeleteMessagePayload) => void;
+  "chat:read": (payload: ReadReceiptPayload) => void;
+  "chat:vanishing": (payload: VanishingModePayload) => void;
+  "note:sync": (notes: Note[]) => void;
   "presence:update": (presence: Presence) => void;
   "typing:update": (payload: TypingUpdate) => void;
   "signal:offer": (payload: SignalingPayload) => void;
@@ -185,6 +221,10 @@ export type ClientToServerEvents = {
   "chat:send": (payload: Omit<ChatMessage, "id" | "createdAt" | "deliveryStatus"> & Partial<Pick<ChatMessage, "deliveryStatus">>) => void;
   "chat:reaction": (payload: ReactionPayload) => void;
   "chat:delete": (payload: DeleteMessagePayload) => void;
+  "chat:read": (payload: ReadReceiptPayload) => void;
+  "chat:vanishing": (payload: VanishingModePayload) => void;
+  "note:publish": (payload: { text: string; emoji?: string }) => void;
+  "note:fetch": () => void;
   "presence:set": (payload: Pick<Presence, "status" | "conversationId">) => void;
   "typing:start": (payload: z.infer<typeof typingStartStopSchema>) => void;
   "typing:stop": (payload: z.infer<typeof typingStartStopSchema>) => void;

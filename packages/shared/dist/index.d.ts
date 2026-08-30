@@ -585,6 +585,73 @@ export declare const conversationParticipantSchema: z.ZodObject<{
     } | undefined;
     lastReadMessageId?: string | null | undefined;
 }>;
+export declare const noteSchema: z.ZodObject<{
+    id: z.ZodString;
+    userId: z.ZodString;
+    username: z.ZodOptional<z.ZodString>;
+    nickname: z.ZodString;
+    avatarUrl: z.ZodOptional<z.ZodString>;
+    text: z.ZodString;
+    emoji: z.ZodOptional<z.ZodString>;
+    createdAt: z.ZodString;
+    expiresAt: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    id: string;
+    createdAt: string;
+    text: string;
+    userId: string;
+    nickname: string;
+    expiresAt: string;
+    emoji?: string | undefined;
+    username?: string | undefined;
+    avatarUrl?: string | undefined;
+}, {
+    id: string;
+    createdAt: string;
+    text: string;
+    userId: string;
+    nickname: string;
+    expiresAt: string;
+    emoji?: string | undefined;
+    username?: string | undefined;
+    avatarUrl?: string | undefined;
+}>;
+export declare const readReceiptPayloadSchema: z.ZodObject<{
+    conversationId: z.ZodString;
+    userId: z.ZodString;
+    messageId: z.ZodOptional<z.ZodString>;
+    readAt: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    conversationId: string;
+    userId: string;
+    readAt: string;
+    messageId?: string | undefined;
+}, {
+    conversationId: string;
+    userId: string;
+    readAt: string;
+    messageId?: string | undefined;
+}>;
+export declare const vanishingModePayloadSchema: z.ZodObject<{
+    conversationId: z.ZodString;
+    enabled: z.ZodBoolean;
+}, "strip", z.ZodTypeAny, {
+    conversationId: string;
+    enabled: boolean;
+}, {
+    conversationId: string;
+    enabled: boolean;
+}>;
+export declare const createGroupPayloadSchema: z.ZodObject<{
+    title: z.ZodString;
+    memberIds: z.ZodArray<z.ZodString, "many">;
+}, "strip", z.ZodTypeAny, {
+    title: string;
+    memberIds: string[];
+}, {
+    title: string;
+    memberIds: string[];
+}>;
 export declare const messageReceiptSchema: z.ZodObject<{
     messageId: z.ZodString;
     userId: z.ZodString;
@@ -593,13 +660,13 @@ export declare const messageReceiptSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     messageId: string;
     userId: string;
-    deliveredAt?: string | null | undefined;
     readAt?: string | null | undefined;
+    deliveredAt?: string | null | undefined;
 }, {
     messageId: string;
     userId: string;
-    deliveredAt?: string | null | undefined;
     readAt?: string | null | undefined;
+    deliveredAt?: string | null | undefined;
 }>;
 export declare const callSessionSchema: z.ZodObject<{
     id: z.ZodString;
@@ -640,10 +707,17 @@ export type Conversation = z.infer<typeof conversationSchema>;
 export type ConversationParticipant = z.infer<typeof conversationParticipantSchema>;
 export type MessageReceipt = z.infer<typeof messageReceiptSchema>;
 export type CallSession = z.infer<typeof callSessionSchema>;
+export type Note = z.infer<typeof noteSchema>;
+export type ReadReceiptPayload = z.infer<typeof readReceiptPayloadSchema>;
+export type VanishingModePayload = z.infer<typeof vanishingModePayloadSchema>;
+export type CreateGroupPayload = z.infer<typeof createGroupPayloadSchema>;
 export type ServerToClientEvents = {
     "chat:message": (message: ChatMessage) => void;
     "chat:reaction": (payload: ReactionPayload) => void;
     "chat:delete": (payload: DeleteMessagePayload) => void;
+    "chat:read": (payload: ReadReceiptPayload) => void;
+    "chat:vanishing": (payload: VanishingModePayload) => void;
+    "note:sync": (notes: Note[]) => void;
     "presence:update": (presence: Presence) => void;
     "typing:update": (payload: TypingUpdate) => void;
     "signal:offer": (payload: SignalingPayload) => void;
@@ -667,6 +741,13 @@ export type ClientToServerEvents = {
     "chat:send": (payload: Omit<ChatMessage, "id" | "createdAt" | "deliveryStatus"> & Partial<Pick<ChatMessage, "deliveryStatus">>) => void;
     "chat:reaction": (payload: ReactionPayload) => void;
     "chat:delete": (payload: DeleteMessagePayload) => void;
+    "chat:read": (payload: ReadReceiptPayload) => void;
+    "chat:vanishing": (payload: VanishingModePayload) => void;
+    "note:publish": (payload: {
+        text: string;
+        emoji?: string;
+    }) => void;
+    "note:fetch": () => void;
     "presence:set": (payload: Pick<Presence, "status" | "conversationId">) => void;
     "typing:start": (payload: z.infer<typeof typingStartStopSchema>) => void;
     "typing:stop": (payload: z.infer<typeof typingStartStopSchema>) => void;
